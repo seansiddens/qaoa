@@ -48,21 +48,10 @@ def simulate_numpy_rz(theta, dtype=np.complex64):
     result = rz @ input_state
     return result
 
-def random_state_numpy(dtype=np.complex64):
-    """Generate a random normalized quantum state vector"""
-    # Generate random complex numbers
-    real_part = np.random.randn(2)
-    imag_part = np.random.randn(2)
-    state = real_part + 1j * imag_part
-    # Normalize
-    norm = np.sqrt(np.sum(np.abs(state)**2))
-    return (state / norm).astype(dtype)
-
 # ---------- FP16 Complex Implementation ----------
-
 class ComplexFP16:
     """A complex number represented by two fp16 values (real and imaginary parts)"""
-    def __init__(self, real, imag=0.0):
+    def __init__(self, real, imag):
         self.real = np.float16(real)
         self.imag = np.float16(imag)
     
@@ -134,13 +123,13 @@ def rx_gate_fp16(theta):
     sin = np.float16(np.sin(theta / 2))
     
     return np.array([
-        [ComplexFP16(cos), ComplexFP16(0, -sin)],
-        [ComplexFP16(0, -sin), ComplexFP16(cos)]
+        [ComplexFP16(cos, 0), ComplexFP16(0, -sin)],
+        [ComplexFP16(0, -sin), ComplexFP16(cos, 0)]
     ])
 
 def simulate_fp16_rx(theta):
     """Apply RX to |0⟩ using FP16 complex numbers and return resulting state vector"""
-    input_state = np.array([ComplexFP16(1.0), ComplexFP16(0.0)])
+    input_state = np.array([ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0)])
     rx = rx_gate_fp16(theta)
     
     # Manual matrix multiplication with FP16 complex numbers
@@ -157,13 +146,13 @@ def h_gate_fp16():
     h_factor = np.float16(0.7071067811865476)
     
     return np.array([
-        [ComplexFP16(h_factor), ComplexFP16(h_factor)],
-        [ComplexFP16(h_factor), ComplexFP16(-h_factor)]
+        [ComplexFP16(h_factor, 0.0), ComplexFP16(h_factor, 0.0)],
+        [ComplexFP16(h_factor, 0.0), ComplexFP16(-h_factor, 0.0)]
     ])
 
 def simulate_fp16_h():
     """Apply H to |0⟩ using FP16 complex numbers and return resulting state vector"""
-    input_state = np.array([ComplexFP16(1.0), ComplexFP16(0.0)])
+    input_state = np.array([ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0)])
     h = h_gate_fp16()
     
     # Manual matrix multiplication with FP16 complex numbers
@@ -183,13 +172,13 @@ def rz_gate_fp16(theta):
     sin_pos = np.float16(np.sin(theta / 2))
     
     return np.array([
-        [ComplexFP16(cos_neg, sin_neg), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(cos_pos, sin_pos)]
+        [ComplexFP16(cos_neg, sin_neg), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(cos_pos, sin_pos)]
     ])
 
 def simulate_fp16_rz(theta):
     """Apply RZ to |0⟩ using FP16 complex numbers and return resulting state vector"""
-    input_state = np.array([ComplexFP16(1.0), ComplexFP16(0.0)])
+    input_state = np.array([ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0)])
     rz = rz_gate_fp16(theta)
     
     # Manual matrix multiplication with FP16 complex numbers
@@ -199,28 +188,6 @@ def simulate_fp16_rz(theta):
     ])
     
     return result
-
-def random_state_fp16():
-    """Generate a random normalized quantum state vector using FP16 complex numbers"""
-    # Generate random real and imaginary parts
-    real_part = np.random.randn(2).astype(np.float16)
-    imag_part = np.random.randn(2).astype(np.float16)
-    
-    # Create complex numbers
-    state = np.array([
-        ComplexFP16(real_part[0], imag_part[0]),
-        ComplexFP16(real_part[1], imag_part[1])
-    ])
-    
-    # Normalize
-    norm_squared = state[0].real * state[0].real + state[0].imag * state[0].imag + \
-                   state[1].real * state[1].real + state[1].imag * state[1].imag
-    norm = np.float16(np.sqrt(float(norm_squared)))
-    
-    return np.array([
-        ComplexFP16(state[0].real / norm, state[0].imag / norm),
-        ComplexFP16(state[1].real / norm, state[1].imag / norm)
-    ])
 
 # ---------- CUDA-Q Implementation ----------
 
@@ -277,10 +244,10 @@ def cz_gate_numpy(dtype=np.complex64):
 def cz_gate_fp16():
     """Returns the controlled-Z gate matrix using FP16 complex numbers"""
     return np.array([
-        [ComplexFP16(1.0), ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(1.0), ComplexFP16(0.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(1.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(-1.0)]
+        [ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(-1.0, 0.0)]
     ])
 
 def simulate_numpy_cz(input_state=None, dtype=np.complex64):
@@ -298,10 +265,10 @@ def simulate_fp16_cz(input_state=None):
     if input_state is None:
         # Default to |00⟩ state
         input_state = np.array([
-            ComplexFP16(1.0), 
-            ComplexFP16(0.0), 
-            ComplexFP16(0.0), 
-            ComplexFP16(0.0)
+            ComplexFP16(1.0, 0.0), 
+            ComplexFP16(0.0, 0.0), 
+            ComplexFP16(0.0, 0.0), 
+            ComplexFP16(0.0, 0.0)
         ])
     cz = cz_gate_fp16()
     
@@ -357,10 +324,10 @@ def test_cz_gate():
     input_state_np[3] = 1.0  # |11⟩ state
     
     input_state_fp16 = np.array([
-        ComplexFP16(0.0), 
-        ComplexFP16(0.0), 
-        ComplexFP16(0.0), 
-        ComplexFP16(1.0)
+        ComplexFP16(0.0, 0.0), 
+        ComplexFP16(0.0, 0.0), 
+        ComplexFP16(0.0, 0.0), 
+        ComplexFP16(1.0, 0.0)
     ])
     
     result_np_11 = simulate_numpy_cz(input_state_np, dtype=np.complex64)
@@ -410,8 +377,8 @@ def test_tensor_product():
     
     h_gate_fp16_matrix = h_gate_fp16()
     i_gate_fp16 = np.array([
-        [ComplexFP16(1.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(1.0)]
+        [ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(1.0, 0.0)]
     ])
     
     h_i_fp16 = tensor_product_fp16(h_gate_fp16_matrix, i_gate_fp16)
@@ -435,10 +402,10 @@ def test_tensor_product():
     state_numpy[0] = 1.0  # |00⟩
     
     state_fp16 = np.array([
-        ComplexFP16(1.0),
-        ComplexFP16(0.0),
-        ComplexFP16(0.0),
-        ComplexFP16(0.0)
+        ComplexFP16(1.0, 0.0),
+        ComplexFP16(0.0, 0.0),
+        ComplexFP16(0.0, 0.0),
+        ComplexFP16(0.0, 0.0)
     ])
     
     # Apply the tensor product matrices
@@ -475,10 +442,10 @@ def cnot_gate_numpy(dtype=np.complex64):
 def cnot_gate_fp16():
     """Returns the CNOT gate matrix using FP16 complex numbers"""
     return np.array([
-        [ComplexFP16(1.0), ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(1.0), ComplexFP16(0.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(1.0)],
-        [ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(1.0), ComplexFP16(0.0)]
+        [ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(1.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(1.0, 0.0), ComplexFP16(0.0, 0.0)]
     ])
 
 def simulate_numpy_cnot(input_state=None, dtype=np.complex64):
@@ -496,10 +463,10 @@ def simulate_fp16_cnot(input_state=None):
     if input_state is None:
         # Default to |00⟩ state
         input_state = np.array([
-            ComplexFP16(1.0), 
-            ComplexFP16(0.0), 
-            ComplexFP16(0.0), 
-            ComplexFP16(0.0)
+            ComplexFP16(1.0, 0.0), 
+            ComplexFP16(0.0, 0.0), 
+            ComplexFP16(0.0, 0.0), 
+            ComplexFP16(0.0, 0.0)
         ])
     cnot = cnot_gate_fp16()
     
@@ -555,10 +522,10 @@ def test_cnot_gate():
     input_state_np[2] = 1.0  # |10⟩ state
     
     input_state_fp16 = np.array([
-        ComplexFP16(0.0), 
-        ComplexFP16(0.0), 
-        ComplexFP16(1.0), 
-        ComplexFP16(0.0)
+        ComplexFP16(0.0, 0.0), 
+        ComplexFP16(0.0, 0.0), 
+        ComplexFP16(1.0, 0.0), 
+        ComplexFP16(0.0, 0.0)
     ])
     
     # Create |10⟩ state in CUDA-Q
@@ -618,10 +585,10 @@ def zz_interaction_fp16(gamma):
     sin_pos = np.float16(np.sin(gamma))
     
     return np.array([
-        [ComplexFP16(cos_neg, sin_neg), ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(cos_pos, sin_pos), ComplexFP16(0.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(cos_pos, sin_pos), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(0.0), ComplexFP16(cos_neg, sin_neg)]
+        [ComplexFP16(cos_neg, sin_neg), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(cos_pos, sin_pos), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(cos_pos, sin_pos), ComplexFP16(0.0, 0.0)],
+        [ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(0.0, 0.0), ComplexFP16(cos_neg, sin_neg)]
     ])
 
 def simulate_numpy_zz(gamma, input_state=None, dtype=np.complex64):
@@ -639,10 +606,10 @@ def simulate_fp16_zz(gamma, input_state=None):
     if input_state is None:
         # Default to |00⟩ state
         input_state = np.array([
-            ComplexFP16(1.0), 
-            ComplexFP16(0.0), 
-            ComplexFP16(0.0), 
-            ComplexFP16(0.0)
+            ComplexFP16(1.0, 0.0), 
+            ComplexFP16(0.0, 0.0), 
+            ComplexFP16(0.0, 0.0), 
+            ComplexFP16(0.0, 0.0)
         ])
     zz = zz_interaction_fp16(gamma)
     
@@ -723,10 +690,10 @@ def test_zz_interaction():
     
     # Create |++⟩ state in FP16
     input_state_fp16_plusplus = np.array([
-        ComplexFP16(0.5), 
-        ComplexFP16(0.5), 
-        ComplexFP16(0.5), 
-        ComplexFP16(0.5)
+        ComplexFP16(0.5, 0.0), 
+        ComplexFP16(0.5, 0.0), 
+        ComplexFP16(0.5, 0.0), 
+        ComplexFP16(0.5, 0.0)
     ])
     
     # Apply ZZ interaction to |++⟩
@@ -749,229 +716,652 @@ def test_zz_interaction():
     print(f"Fidelity between FP16 and CUDA-Q: {fid_fp16_cudaq_plusplus:.6f}")
     print(f"Fidelity between FP16 and NumPy: {fid_fp16_np_plusplus:.6f}")
 
-# ---------- Simple QAOA Implementation ----------
+# ---------- QAOA Circuit Components ----------
 
-def simple_qaoa_circuit_numpy(gamma, beta, dtype=np.complex64):
-    """Implement a single layer of QAOA for a 2-qubit system (single edge) using NumPy
+def qaoa_problem_kernel_fp16(gamma, edge_list, num_qubits):
+    """Implement the problem Hamiltonian part of QAOA using FP16
     
     Args:
-        gamma: Problem Hamiltonian angle
-        beta: Mixer Hamiltonian angle
-        dtype: NumPy data type
+        gamma: The problem Hamiltonian angle parameter
+        edge_list: List of edges as [source, target] pairs
+        num_qubits: Total number of qubits
         
     Returns:
-        Final state vector after QAOA circuit
+        Matrix representing the unitary exp(-i*gamma*H_problem)
     """
-    # Start with |00⟩ state
-    state = np.zeros(4, dtype=dtype)
-    state[0] = 1.0
+    dim = 2 ** num_qubits
     
-    # Step 1: Apply Hadamard to both qubits (create superposition)
-    h_gate = h_gate_numpy(dtype=dtype)
-    h_h = tensor_product_numpy(h_gate, h_gate, dtype=dtype)
-    state = h_h @ state
+    # Start with identity matrix
+    result = np.zeros((dim, dim), dtype=object)
+    for i in range(dim):
+        for j in range(dim):
+            if i == j:
+                result[i, j] = ComplexFP16(1.0, 0.0)
+            else:
+                result[i, j] = ComplexFP16(0.0, 0.0)
     
-    # Step 2: Apply problem Hamiltonian exp(-i*gamma*Z⊗Z)
-    # For a single edge between qubit 0 and 1, we apply ZZ interaction
-    zz = zz_interaction_numpy(gamma, dtype=dtype)
-    state = zz @ state
+    # For each edge, apply exp(-i*gamma*Z_i Z_j)
+    for edge in edge_list:
+        i, j = edge
+        
+        # Create the ZZ interaction matrix for qubits i and j
+        zz_unitary = np.zeros((dim, dim), dtype=object)
+        for state_idx in range(dim):
+            # Convert state index to binary representation
+            bin_rep = format(state_idx, f'0{num_qubits}b')
+            
+            # Check if the qubits i and j have the same or different parity
+            if bin_rep[num_qubits - 1 - i] == bin_rep[num_qubits - 1 - j]:
+                # Same parity means eigenvalue +1 for Z_i Z_j, so e^(-i*gamma*1)
+                phase = -gamma
+                zz_unitary[state_idx, state_idx] = ComplexFP16(np.cos(phase), np.sin(phase))
+            else:
+                # Different parity means eigenvalue -1 for Z_i Z_j, so e^(-i*gamma*(-1))
+                phase = gamma
+                zz_unitary[state_idx, state_idx] = ComplexFP16(np.cos(phase), np.sin(phase))
+        
+        # Apply this edge's ZZ interaction by matrix multiplication
+        temp = np.zeros((dim, dim), dtype=object)
+        for k in range(dim):
+            for l in range(dim):
+                temp[k, l] = ComplexFP16(0.0, 0.0)
+                for m in range(dim):
+                    temp[k, l] = temp[k, l] + zz_unitary[k, m] * result[m, l]
+        
+        # Update the result
+        result = temp
     
-    # Step 3: Apply mixer Hamiltonian exp(-i*beta*X⊗I) ⊗ exp(-i*beta*I⊗X)
-    # Apply RX(2*beta) to both qubits
-    rx_gate = rx_gate_numpy(2.0 * beta, dtype=dtype)
-    identity = np.eye(2, dtype=dtype)
-    
-    # RX on first qubit
-    rx_i = tensor_product_numpy(rx_gate, identity, dtype=dtype)
-    state = rx_i @ state
-    
-    # RX on second qubit
-    i_rx = tensor_product_numpy(identity, rx_gate, dtype=dtype)
-    state = i_rx @ state
-    
-    return state
+    return result
 
-def simple_qaoa_circuit_fp16(gamma, beta):
-    """Implement a single layer of QAOA for a 2-qubit system (single edge) using FP16
+def qaoa_mixer_kernel_fp16(beta, num_qubits):
+    """Implement the mixer Hamiltonian part of QAOA using FP16
     
     Args:
-        gamma: Problem Hamiltonian angle
-        beta: Mixer Hamiltonian angle
+        beta: The mixer Hamiltonian angle parameter
+        num_qubits: Total number of qubits
         
     Returns:
-        Final state vector after QAOA circuit
+        Matrix representing the unitary exp(-i*beta*H_mixer)
     """
-    # Start with |00⟩ state
-    state = np.array([
-        ComplexFP16(1.0),
-        ComplexFP16(0.0),
-        ComplexFP16(0.0),
-        ComplexFP16(0.0)
-    ])
+    dim = 2 ** num_qubits
     
-    # Step 1: Apply Hadamard to both qubits (create superposition)
-    h_gate = h_gate_fp16()
-    identity = np.array([
-        [ComplexFP16(1.0), ComplexFP16(0.0)],
-        [ComplexFP16(0.0), ComplexFP16(1.0)]
-    ])
+    # Start with identity matrix
+    result = np.zeros((dim, dim), dtype=object)
+    for i in range(dim):
+        for j in range(dim):
+            if i == j:
+                result[i, j] = ComplexFP16(1.0, 0.0)
+            else:
+                result[i, j] = ComplexFP16(0.0, 0.0)
     
-    # H on first qubit
-    h_i = tensor_product_fp16(h_gate, identity)
+    # For each qubit, apply RX(2*beta)
+    for qubit in range(num_qubits):
+        # Create the RX matrix for this qubit
+        rx_matrix = np.zeros((dim, dim), dtype=object)
+        
+        for state_idx1 in range(dim):
+            for state_idx2 in range(dim):
+                # Get binary representations of both states
+                bin_rep1 = format(state_idx1, f'0{num_qubits}b')
+                bin_rep2 = format(state_idx2, f'0{num_qubits}b')
+                
+                # Check if states differ only in the target qubit
+                differs_only_at_target = True
+                for q in range(num_qubits):
+                    if q != qubit and bin_rep1[num_qubits - 1 - q] != bin_rep2[num_qubits - 1 - q]:
+                        differs_only_at_target = False
+                        break
+                
+                if differs_only_at_target:
+                    if bin_rep1[num_qubits - 1 - qubit] == bin_rep2[num_qubits - 1 - qubit]:
+                        # Diagonal element - cos(beta)
+                        rx_matrix[state_idx1, state_idx2] = ComplexFP16(np.cos(beta), 0.0)
+                    else:
+                        # Off-diagonal element - -i*sin(beta)
+                        rx_matrix[state_idx1, state_idx2] = ComplexFP16(0.0, -np.sin(beta))
+                else:
+                    # States differ by more than one qubit - no contribution
+                    rx_matrix[state_idx1, state_idx2] = ComplexFP16(0.0, 0.0)
+        
+        # Apply this qubit's RX by matrix multiplication
+        temp = np.zeros((dim, dim), dtype=object)
+        for k in range(dim):
+            for l in range(dim):
+                temp[k, l] = ComplexFP16(0.0, 0.0)
+                for m in range(dim):
+                    temp[k, l] = temp[k, l] + rx_matrix[k, m] * result[m, l]
+        
+        # Update the result
+        result = temp
     
-    # Manual matrix multiplication
-    temp_state = np.zeros(4, dtype=object)
-    for i in range(4):
-        for j in range(4):
-            temp_state[i] = temp_state[i] + h_i[i, j] * state[j]
-    state = temp_state
-    
-    # H on second qubit
-    i_h = tensor_product_fp16(identity, h_gate)
-    
-    # Manual matrix multiplication
-    temp_state = np.zeros(4, dtype=object)
-    for i in range(4):
-        for j in range(4):
-            temp_state[i] = temp_state[i] + i_h[i, j] * state[j]
-    state = temp_state
-    
-    # Step 2: Apply problem Hamiltonian exp(-i*gamma*Z⊗Z)
-    zz = zz_interaction_fp16(gamma)
-    
-    # Manual matrix multiplication
-    temp_state = np.zeros(4, dtype=object)
-    for i in range(4):
-        for j in range(4):
-            temp_state[i] = temp_state[i] + zz[i, j] * state[j]
-    state = temp_state
-    
-    # Step 3: Apply mixer Hamiltonian exp(-i*beta*X⊗I) ⊗ exp(-i*beta*I⊗X)
-    rx_gate = rx_gate_fp16(2.0 * beta)
-    
-    # RX on first qubit
-    rx_i = tensor_product_fp16(rx_gate, identity)
-    
-    # Manual matrix multiplication
-    temp_state = np.zeros(4, dtype=object)
-    for i in range(4):
-        for j in range(4):
-            temp_state[i] = temp_state[i] + rx_i[i, j] * state[j]
-    state = temp_state
-    
-    # RX on second qubit
-    i_rx = tensor_product_fp16(identity, rx_gate)
-    
-    # Manual matrix multiplication
-    temp_state = np.zeros(4, dtype=object)
-    for i in range(4):
-        for j in range(4):
-            temp_state[i] = temp_state[i] + i_rx[i, j] * state[j]
-    state = temp_state
-    
-    return state
+    return result
 
-def simple_qaoa_circuit_cudaq(gamma, beta):
-    """Implement a single layer of QAOA for a 2-qubit system (single edge) using CUDA-Q
+def qaoa_apply_fp16(initial_state, problem_kernel, mixer_kernel):
+    """Apply one layer of QAOA to an initial state using FP16
     
     Args:
-        gamma: Problem Hamiltonian angle
-        beta: Mixer Hamiltonian angle
+        initial_state: Initial state vector
+        problem_kernel: Problem Hamiltonian unitary matrix
+        mixer_kernel: Mixer Hamiltonian unitary matrix
         
     Returns:
-        Final state vector after QAOA circuit
+        Resulting state vector
+    """
+    dim = len(initial_state)
+    
+    # Apply problem kernel
+    intermediate_state = np.zeros(dim, dtype=object)
+    for i in range(dim):
+        intermediate_state[i] = ComplexFP16(0.0, 0.0)
+        for j in range(dim):
+            intermediate_state[i] = intermediate_state[i] + problem_kernel[i, j] * initial_state[j]
+    
+    # Apply mixer kernel
+    final_state = np.zeros(dim, dtype=object)
+    for i in range(dim):
+        final_state[i] = ComplexFP16(0.0, 0.0)
+        for j in range(dim):
+            final_state[i] = final_state[i] + mixer_kernel[i, j] * intermediate_state[j]
+    
+    return final_state
+
+def simulate_cudaq_qaoa_layer(gamma, beta, edge_list, num_qubits):
+    """Use CUDA-Q to apply one layer of QAOA with given parameters
+    
+    Args:
+        gamma: Problem Hamiltonian parameter
+        beta: Mixer Hamiltonian parameter
+        edge_list: List of edges as [source, target] pairs
+        num_qubits: Number of qubits
+        
+    Returns:
+        State vector after applying one layer of QAOA
     """
     @cudaq.kernel
-    def qaoa_kernel(gamma: float, beta: float):
-        # Allocate 2 qubits
-        q0 = cudaq.qubit()
-        q1 = cudaq.qubit()
+    def qaoa_layer(gamma: float, beta: float, edges_src: List[int], edges_tgt: List[int]):
+        qubits = cudaq.qvector(num_qubits)
         
-        # Step 1: Apply Hadamard to both qubits (create superposition)
-        h(q0)
-        h(q1)
+        # Initialize in |+⟩ state
+        h(qubits)
         
-        # Step 2: Apply problem Hamiltonian for the edge (0,1)
-        # exp(-i*gamma*Z⊗Z) can be implemented as: CNOT -> Rz(2*gamma) -> CNOT
-        x.ctrl(q0, q1)  # CNOT
-        rz(2.0 * gamma, q1)  # Rz(2*gamma)
-        x.ctrl(q0, q1)  # CNOT
+        # Apply problem Hamiltonian (ZZ rotations)
+        for edge_idx in range(len(edges_src)):
+            qubit_u = edges_src[edge_idx]
+            qubit_v = edges_tgt[edge_idx]
+            
+            # Apply exp(-i*gamma*Z_u*Z_v) using CNOT-RZ-CNOT
+            x.ctrl(qubits[qubit_u], qubits[qubit_v])
+            rz(2.0 * gamma, qubits[qubit_v])
+            x.ctrl(qubits[qubit_u], qubits[qubit_v])
         
-        # Step 3: Apply mixer Hamiltonian
-        rx(2.0 * beta, q0)  # RX on first qubit
-        rx(2.0 * beta, q1)  # RX on second qubit
+        # Apply mixer Hamiltonian (X rotations)
+        for qubit_idx in range(num_qubits):
+            rx(2.0 * beta, qubits[qubit_idx])
     
-    # Retrieve state vector
-    state = cudaq.get_state(qaoa_kernel, gamma, beta)
+    # Extract the edges into source and target lists
+    edges_src = [edge[0] for edge in edge_list]
+    edges_tgt = [edge[1] for edge in edge_list]
+    
+    # Run the kernel and get the state vector
+    state = cudaq.get_state(qaoa_layer, gamma, beta, edges_src, edges_tgt)
     return np.array(state)
 
-def analyze_qaoa_solution(state_vector):
-    """Analyze the QAOA output to find the Max-Cut solution for a single edge"""
-    # For a 2-qubit system with a single edge, the max cut is achieved when
-    # the two qubits have different values (01 or 10)
-    probabilities = np.abs(state_vector)**2
+def test_qaoa_components():
+    """Test the QAOA component implementations"""
+    # Test parameters
+    gamma = np.pi / 8  # Problem Hamiltonian angle
+    beta = np.pi / 4   # Mixer Hamiltonian angle
     
-    print(f"State vector: {state_vector}")
-    print(f"Probabilities: {probabilities}")
+    # Test on a small graph (triangle)
+    num_qubits = 3
+    edges = [[0, 1], [1, 2], [0, 2]]
     
-    # For a 2-qubit system
-    bitstrings = ["00", "01", "10", "11"]
-    for i, bitstring in enumerate(bitstrings):
-        print(f"Probability of {bitstring}: {probabilities[i]:.6f}")
+    print("\nTesting QAOA components implementation...")
     
-    # Find the most likely bitstring
-    most_likely_idx = np.argmax(probabilities)
-    most_likely = bitstrings[most_likely_idx]
-    print(f"Most likely outcome: {most_likely}")
+    # Create initial state |+++⟩ using FP16
+    initial_state_fp16 = np.zeros(2**num_qubits, dtype=object)
+    h_factor = np.float16(0.7071067811865476)  # 1/sqrt(2)
+    for i in range(2**num_qubits):
+        initial_state_fp16[i] = ComplexFP16(h_factor**num_qubits, 0.0)
     
-    # For a single edge, calculate the cut value (1 if different bits, 0 if same)
-    cut_value = 1 if most_likely[0] != most_likely[1] else 0
-    print(f"Cut value: {cut_value}")
+    # Create FP16 QAOA kernels
+    problem_kernel_fp16 = qaoa_problem_kernel_fp16(gamma, edges, num_qubits)
+    mixer_kernel_fp16 = qaoa_mixer_kernel_fp16(beta, num_qubits)
     
-    return most_likely, cut_value
-
-def test_simple_qaoa():
-    """Test a simple QAOA implementation for a 2-qubit system with a single edge"""
-    print("\nTesting simple QAOA circuit (2 qubits, 1 edge)...")
+    # Apply QAOA using FP16
+    result_fp16 = qaoa_apply_fp16(initial_state_fp16, problem_kernel_fp16, mixer_kernel_fp16)
     
-    # Choose test parameters (optimal for a single edge would be gamma=pi/4, beta=pi/8)
-    gamma = np.pi / 4  # Problem Hamiltonian angle
-    beta = np.pi / 8   # Mixer Hamiltonian angle
-    
-    print(f"Parameters: gamma={gamma}, beta={beta}")
-    
-    # Run all three implementations
-    result_np = simple_qaoa_circuit_numpy(gamma, beta, dtype=np.complex64)
-    result_fp16 = simple_qaoa_circuit_fp16(gamma, beta)
-    result_cudaq = simple_qaoa_circuit_cudaq(gamma, beta)
+    # Apply QAOA using CUDA-Q
+    result_cudaq = simulate_cudaq_qaoa_layer(gamma, beta, edges, num_qubits)
     
     # Convert FP16 results to complex64 for comparison
     result_fp16_complex = np.array([x.to_complex64() for x in result_fp16])
     
     # Calculate fidelity
-    fid_np_cudaq = fidelity(result_np, result_cudaq)
-    fid_fp16_np = fidelity(result_fp16_complex, result_np)
-    fid_fp16_cudaq = fidelity(result_fp16_complex, result_cudaq)
+    fid = fidelity(result_fp16_complex, result_cudaq)
     
-    print("\nQAOA state vector comparison:")
-    print("CUDA-Q Result:", result_cudaq)
-    print("NumPy Result:", result_np)
-    print("FP16 Result:", [str(x) for x in result_fp16])
-    print(f"Fidelity between NumPy and CUDA-Q: {fid_np_cudaq:.6f}")
-    print(f"Fidelity between FP16 and CUDA-Q: {fid_fp16_cudaq:.6f}")
-    print(f"Fidelity between FP16 and NumPy: {fid_fp16_np:.6f}")
+    print(f"\nQAOA with gamma={gamma}, beta={beta} on triangle graph:")
+    print(f"Fidelity between FP16 and CUDA-Q implementations: {fid:.6f}")
     
-    # Analyze the solutions
-    print("\nAnalyzing CUDA-Q solution:")
-    analyze_qaoa_solution(result_cudaq)
+    # Print a few state amplitudes for comparison
+    print("\nSample state amplitudes comparison:")
+    print("State | CUDA-Q | FP16")
+    for i in range(min(8, len(result_cudaq))):
+        bin_rep = format(i, f'0{num_qubits}b')
+        print(f"|{bin_rep}⟩ | {result_cudaq[i]:.6f} | {result_fp16_complex[i]:.6f}")
     
-    print("\nAnalyzing NumPy solution:")
-    analyze_qaoa_solution(result_np)
-    
-    print("\nAnalyzing FP16 solution:")
-    analyze_qaoa_solution(result_fp16_complex)
+    return fid > 0.99  # Return True if fidelity is high enough
 
 # ---------- Main Execution ----------
+
+# Add QAOA implementation using FP16
+class MaxCutQAOA_FP16:
+    """QAOA implementation for Max-Cut using FP16 complex numbers"""
+    
+    def __init__(self, nodes: List[int], edges: List[List[int]], layer_count: int = 1, seed: int = 13):
+        """Initialize the QAOA solver
+        
+        Args:
+            nodes: List of nodes in the graph
+            edges: List of edges as [source, target] pairs
+            layer_count: Number of QAOA layers
+            seed: Random seed for reproducibility
+        """
+        self.nodes = nodes
+        self.edges = edges
+        self.layer_count = layer_count
+        self.seed = seed
+        
+        self.qubit_count = len(nodes)
+        self.parameter_count = 2 * layer_count
+        
+        # Set random seed
+        np.random.seed(seed)
+        
+        # Create the Hamiltonian
+        self.hamiltonian = self.hamiltonian_max_cut()
+    
+    def hamiltonian_max_cut(self):
+        """Create the Hamiltonian for finding the max cut for the graph in FP16 format
+        
+        Returns:
+            Dictionary representation of the Hamiltonian terms and their coefficients
+        """
+        # For FP16 representation, we'll create a simple representation of the Hamiltonian
+        # as a dictionary of Pauli strings and their coefficients
+        hamiltonian = {}
+        
+        for edge in self.edges:
+            u, v = edge
+            
+            # The term Z_u Z_v with coefficient 0.5
+            term = ['I'] * self.qubit_count
+            term[u] = 'Z'
+            term[v] = 'Z'
+            pauli_string = ''.join(term)
+            
+            if pauli_string in hamiltonian:
+                hamiltonian[pauli_string] += ComplexFP16(0.5, 0.0)
+            else:
+                hamiltonian[pauli_string] = ComplexFP16(0.5, 0.0)
+            
+            # The term -I_u I_v with coefficient -0.5
+            identity_term = 'I' * self.qubit_count
+            if identity_term in hamiltonian:
+                hamiltonian[identity_term] -= ComplexFP16(0.5, 0.0)
+            else:
+                hamiltonian[identity_term] = ComplexFP16(-0.5, 0.0)
+        
+        return hamiltonian
+    
+    def create_initial_state(self):
+        """Create the initial |+⟩^⊗n state using FP16
+        
+        Returns:
+            Array representing the initial state
+        """
+        dim = 2 ** self.qubit_count
+        initial_state = np.zeros(dim, dtype=object)
+        
+        # The amplitude of each basis state in |+⟩^⊗n is 1/sqrt(2^n)
+        amplitude = ComplexFP16(1.0 / np.sqrt(2 ** self.qubit_count), 0.0)
+        
+        for i in range(dim):
+            initial_state[i] = amplitude
+        
+        return initial_state
+    
+    def get_problem_unitary(self, gamma: float):
+        """Create the problem Hamiltonian unitary exp(-i * gamma * H_problem)
+        
+        Args:
+            gamma: The problem Hamiltonian angle parameter
+            
+        Returns:
+            Matrix representing the unitary
+        """
+        return qaoa_problem_kernel_fp16(gamma, self.edges, self.qubit_count)
+    
+    def get_mixer_unitary(self, beta: float):
+        """Create the mixer Hamiltonian unitary exp(-i * beta * H_mixer)
+        
+        Args:
+            beta: The mixer Hamiltonian angle parameter
+            
+        Returns:
+            Matrix representing the unitary
+        """
+        return qaoa_mixer_kernel_fp16(beta, self.qubit_count)
+    
+    def apply_qaoa_circuit(self, parameters: List[float]):
+        """Apply the QAOA circuit with given parameters
+        
+        Args:
+            parameters: List of parameters [gamma_1, gamma_2, ..., beta_1, beta_2, ...]
+            
+        Returns:
+            The output state vector
+        """
+        # Create the initial state
+        state = self.create_initial_state()
+        
+        # Apply each QAOA layer
+        for layer in range(self.layer_count):
+            gamma = parameters[layer]
+            beta = parameters[layer + self.layer_count]
+            
+            # Get the problem unitary for this layer
+            problem_unitary = self.get_problem_unitary(gamma)
+            
+            # Apply the problem unitary
+            intermediate_state = np.zeros(len(state), dtype=object)
+            for i in range(len(state)):
+                intermediate_state[i] = ComplexFP16(0.0, 0.0)
+                for j in range(len(state)):
+                    intermediate_state[i] = intermediate_state[i] + problem_unitary[i, j] * state[j]
+            
+            # Get the mixer unitary for this layer
+            mixer_unitary = self.get_mixer_unitary(beta)
+            
+            # Apply the mixer unitary
+            state = np.zeros(len(intermediate_state), dtype=object)
+            for i in range(len(intermediate_state)):
+                state[i] = ComplexFP16(0.0, 0.0)
+                for j in range(len(intermediate_state)):
+                    state[i] = state[i] + mixer_unitary[i, j] * intermediate_state[j]
+        
+        return state
+    
+    def evaluate_expectation(self, state):
+        """Evaluate the expectation value of the Hamiltonian for a given state
+        
+        Args:
+            state: The state to evaluate
+            
+        Returns:
+            Expectation value as a ComplexFP16
+        """
+        expectation = ComplexFP16(0.0, 0.0)
+        dim = 2 ** self.qubit_count
+        
+        # For each Pauli string in the Hamiltonian
+        for pauli_string, coefficient in self.hamiltonian.items():
+            # For the identity operator
+            if pauli_string == 'I' * self.qubit_count:
+                # The expectation value is just the coefficient
+                for i in range(dim):
+                    expectation += coefficient * state[i] * state[i]
+            else:
+                # For each basis state
+                for i in range(dim):
+                    bin_i = format(i, f'0{self.qubit_count}b')
+                    
+                    # Compute the result of applying this Pauli string to |i⟩
+                    target_idx = i
+                    phase = ComplexFP16(1.0, 0.0)
+                    
+                    # Apply each Pauli operator
+                    for q in range(self.qubit_count):
+                        if pauli_string[q] == 'X':
+                            # X flips the bit at position q
+                            target_idx ^= (1 << (self.qubit_count - 1 - q))
+                        elif pauli_string[q] == 'Z':
+                            # Z adds a phase -1 if bit q is 1
+                            if bin_i[q] == '1':
+                                phase = phase * ComplexFP16(-1.0, 0.0)
+                    
+                    # Add the contribution to the expectation value
+                    expectation += coefficient * state[i] * phase * state[target_idx]
+        
+        return expectation
+    
+    def objective_function(self, parameters: List[float]):
+        """Compute the objective function (energy) for given parameters
+        
+        Args:
+            parameters: The QAOA parameters
+            
+        Returns:
+            The energy value as a float
+        """
+        # Apply the QAOA circuit
+        state = self.apply_qaoa_circuit(parameters)
+        
+        # Evaluate the expectation value
+        expectation = self.evaluate_expectation(state)
+        
+        # Return the real part as a float
+        return float(expectation.real)
+    
+    def optimize(self, iterations: int = 100):
+        """Optimize the QAOA parameters using a simple grid search
+        
+        Args:
+            iterations: Number of iterations
+            
+        Returns:
+            Tuple of (optimal energy, optimal parameters)
+        """
+        # Start with random parameters
+        best_params = np.random.uniform(-np.pi, np.pi, self.parameter_count)
+        best_energy = self.objective_function(best_params)
+        
+        print(f"Initial parameters: {best_params}")
+        print(f"Initial energy: {best_energy}")
+        
+        # Perform simple optimization
+        for i in range(iterations):
+            # Try a small random perturbation
+            new_params = best_params + np.random.uniform(-0.1, 0.1, self.parameter_count)
+            new_energy = self.objective_function(new_params)
+            
+            # Keep the better parameters
+            if new_energy < best_energy:
+                best_energy = new_energy
+                best_params = new_params
+                print(f"Iteration {i+1}: Energy = {best_energy}, Parameters = {best_params}")
+        
+        return best_energy, best_params
+    
+    def sample(self, parameters: List[float] = None, shots: int = 1000):
+        """Sample from the QAOA circuit
+        
+        Args:
+            parameters: The QAOA parameters (if None, uses optimized parameters)
+            shots: Number of shots to sample
+            
+        Returns:
+            Dictionary of bitstrings and their counts
+        """
+        if parameters is None:
+            # Optimize if not already done
+            if not hasattr(self, 'optimal_parameters'):
+                self.optimal_energy, self.optimal_parameters = self.optimize()
+            parameters = self.optimal_parameters
+        
+        # Apply the QAOA circuit
+        state = self.apply_qaoa_circuit(parameters)
+        
+        # Convert to complex64 for sampling
+        state_complex = np.array([x.to_complex64() for x in state])
+        
+        # Calculate probabilities
+        probabilities = np.abs(state_complex) ** 2
+        
+        # Normalize probabilities
+        probabilities /= np.sum(probabilities)
+        
+        # Sample according to probabilities
+        outcomes = np.random.choice(2 ** self.qubit_count, size=shots, p=probabilities)
+        
+        # Convert to bitstrings and count
+        counts = {}
+        for outcome in outcomes:
+            bitstring = format(outcome, f'0{self.qubit_count}b')
+            if bitstring in counts:
+                counts[bitstring] += 1
+            else:
+                counts[bitstring] = 1
+        
+        # Sort by counts (highest to lowest)
+        sorted_counts = dict(sorted(counts.items(), key=lambda item: item[1], reverse=True))
+        
+        return sorted_counts
+    
+    def get_max_cut(self, counts=None):
+        """Get the maximum cut from sampling results
+        
+        Args:
+            counts: Measurement counts (if None, performs sampling)
+            
+        Returns:
+            Bitstring representing the max cut
+        """
+        if counts is None:
+            counts = self.sample()
+        
+        # The most frequent outcome is our candidate for the max cut
+        max_cut = max(counts, key=counts.get)
+        
+        # Calculate the cut value
+        cut_value = 0
+        for edge in self.edges:
+            u, v = edge
+            # If the nodes are in different partitions, add 1 to the cut value
+            if max_cut[u] != max_cut[v]:
+                cut_value += 1
+        
+        print(f"Max cut: {max_cut}")
+        print(f"Cut value: {cut_value}")
+        
+        return max_cut, cut_value
+    
+    def run(self):
+        """Run the complete QAOA algorithm: optimize, sample, and return max cut
+        
+        Returns:
+            Tuple of (max cut bitstring, cut value)
+        """
+        # Optimize parameters
+        self.optimal_energy, self.optimal_parameters = self.optimize()
+        
+        # Sample using optimal parameters
+        counts = self.sample(self.optimal_parameters)
+        
+        # Get and return max cut
+        return self.get_max_cut(counts)
+
+def test_maxcut_qaoa():
+    """Test the MaxCut QAOA implementation with FP16"""
+    print("\nTesting MaxCut QAOA implementation with FP16...")
+    
+    # Create a simple triangle graph
+    nodes = [0, 1, 2]
+    edges = [[0, 1], [1, 2], [0, 2]]
+    
+    # Create the QAOA solver
+    qaoa = MaxCutQAOA_FP16(nodes, edges, layer_count=1, seed=42)
+    
+    # Try a single set of parameters
+    gamma = np.pi / 8
+    beta = np.pi / 4
+    parameters = [gamma, beta]
+    
+    # Apply the QAOA circuit
+    state = qaoa.apply_qaoa_circuit(parameters)
+    
+    # Print the state vector
+    print("QAOA state vector:")
+    state_complex = np.array([x.to_complex64() for x in state])
+    for i, amp in enumerate(state_complex):
+        bitstring = format(i, f'0{qaoa.qubit_count}b')
+        # print(f"|{bitstring}⟩: {amp}")
+    
+    # Evaluate the expectation value
+    expectation = qaoa.evaluate_expectation(state)
+    print(f"Expectation value: {expectation.real}")
+    
+    # Now create the CUDA-Q circuit for comparison
+    @cudaq.kernel
+    def qaoa_kernel(gamma: float, beta: float, edges_src: List[int], edges_tgt: List[int]):
+        qubits = cudaq.qvector(len(nodes))
+        
+        # Initialize in |+⟩ state
+        h(qubits)
+        
+        # Apply problem Hamiltonian
+        for edge_idx in range(len(edges_src)):
+            qubit_u = edges_src[edge_idx]
+            qubit_v = edges_tgt[edge_idx]
+            
+            # Apply exp(-i*gamma*Z_u*Z_v) using CNOT-RZ-CNOT
+            x.ctrl(qubits[qubit_u], qubits[qubit_v])
+            rz(2.0 * gamma, qubits[qubit_v])
+            x.ctrl(qubits[qubit_u], qubits[qubit_v])
+        
+        # Apply mixer Hamiltonian
+        for qubit_idx in range(len(nodes)):
+            rx(2.0 * beta, qubits[qubit_idx])
+    
+    # Extract edges for CUDA-Q
+    edges_src = [edge[0] for edge in edges]
+    edges_tgt = [edge[1] for edge in edges]
+    
+    # Get the CUDA-Q state vector
+    cudaq_state = cudaq.get_state(qaoa_kernel, gamma, beta, edges_src, edges_tgt)
+    
+    # print("CUDA-Q state vector:")
+    # for i, amp in enumerate(cudaq_state):
+    #     bitstring = format(i, f'0{qaoa.qubit_count}b')
+    #     # print(f"|{bitstring}⟩: {amp}")
+    
+    # Compare the state vectors
+    fp16_state_complex = np.array([x.to_complex64() for x in state])
+    fid = fidelity(fp16_state_complex, cudaq_state)
+    
+    print(f"Fidelity between FP16 and CUDA-Q implementations: {fid:.6f}")
+    
+    # Now run a small optimization
+    print("\nRunning small optimization...")
+    optimal_energy, optimal_parameters = qaoa.optimize(iterations=10)
+    
+    print(f"Optimal energy: {optimal_energy}")
+    print(f"Optimal parameters: {optimal_parameters}")
+    
+    # Sample from the optimized circuit
+    counts = qaoa.sample(optimal_parameters, shots=100)
+    
+    print("Measurement counts:")
+    for bitstring, count in counts.items():
+        print(f"|{bitstring}⟩: {count}")
+    
+    # Get the max cut
+    max_cut, cut_value = qaoa.get_max_cut(counts)
+    
+    print(f"Max cut: {max_cut}")
+    print(f"Cut value: {cut_value}")
+    
+    return fid > 0.99
 
 def main():
     num_tests = 100
@@ -1068,9 +1458,12 @@ def main():
     
     # Test ZZ interaction
     test_zz_interaction()
+    
+    # Test QAOA components
+    test_qaoa_components()
 
-    # Test simple QAOA circuit
-    test_simple_qaoa()
+    # Test the MaxCut QAOA implementation
+    test_maxcut_qaoa()
 
 if __name__ == "__main__":
     main()

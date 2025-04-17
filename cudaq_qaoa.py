@@ -3,16 +3,6 @@ import cudaq
 from cudaq import spin
 from typing import List, Tuple, Dict
 
-class fp16QAOA:
-    def __init__(self, nodes: List[int], edges: List[List[int]], layer_count: int = 2, seed: int = 13):
-        self.nodes = nodes
-        self.edges = edges
-        self.layer_count = layer_count
-        self.seed = seed
-        
-        
-    
-
 class cuQAOA:
     """QAOA implementation using CUDA-Q for solving the Max-Cut problem on a graph"""
     
@@ -56,18 +46,6 @@ class cuQAOA:
         self.optimizer.initial_parameters = np.random.uniform(-np.pi / 8, np.pi / 8,
                                                            self.parameter_count)
         print("Initial parameters = ", self.optimizer.initial_parameters)
-    
-    def qaoaProblem(self, qubit_0: cudaq.qubit, qubit_1: cudaq.qubit, alpha: float):
-        """Build the QAOA gate sequence between two qubits that represent an edge of the graph
-        
-        Args:
-            qubit_0: Qubit representing the first vertex of an edge
-            qubit_1: Qubit representing the second vertex of an edge
-            alpha: Angle parameter
-        """
-        x.ctrl(qubit_0, qubit_1)
-        rz(2.0 * alpha, qubit_1)
-        x.ctrl(qubit_0, qubit_1)
     
     @staticmethod
     @cudaq.kernel
@@ -248,15 +226,15 @@ if __name__ == "__main__":
 
     seed = 13
 
-    # Create the QAOA solver
+    # Create the CUDA-Q QAOA solver
+    print("Initializing CUDA-Q QAOA solver...")
     qaoa = cuQAOA(nodes, edges, layer_count, seed)
-    
+
     # Print the Hamiltonian
-    print("Hamiltonian:")
     print(qaoa.hamiltonian)
     
-    # Run optimization
-    print("\nOptimizing parameters...")
+    # Continue with CUDA-Q optimization
+    print("\n\nRunning CUDA-Q optimization...")
     optimal_expectation, optimal_parameters = qaoa.optimize()
     
     # Sample using optimal parameters
