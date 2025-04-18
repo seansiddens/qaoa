@@ -138,8 +138,59 @@ class MaxCutQAOA_FP16:
                     state[i] = state[i] + mixer_unitary[i, j] * intermediate_state[j]
         
         return state
-    
+
     def evaluate_expectation(self, state):
+        """Evaluate the expectation value of the Hamiltonian for a given state
+        
+        Args:
+            state: The state to evaluate
+            
+        Returns:
+            Expectation value as a ComplexFP16
+        """
+        expectation = ComplexFP16(0.0, 0.0)
+        dim = 2 ** self.qubit_count
+        
+        # For each Pauli string in the Hamiltonian
+        for pauli_string, coefficient in self.hamiltonian.items():
+            # For the identity operator
+            if pauli_string == 'I' * self.qubit_count:
+                # The expectation value is just the coefficient times the norm
+                for i in range(dim):
+                    # Use conjugate() here to get |state[i]|²
+                    expectation += coefficient * state[i].conjugate() * state[i]
+            else:
+                # For each basis state
+                for i in range(dim):
+                    bin_i = format(i, f'0{self.qubit_count}b')
+                    
+                    # Compute the result of applying this Pauli string to |i⟩
+                    target_idx = i
+                    phase = ComplexFP16(1.0, 0.0)
+                    
+                    # Apply each Pauli operator
+                    for q in range(self.qubit_count):
+                        if pauli_string[q] == 'X':
+                            # X flips the bit at position q
+                            target_idx ^= (1 << (self.qubit_count - 1 - q))
+                        elif pauli_string[q] == 'Z':
+                            # Z adds a phase -1 if bit q is 1
+                            if bin_i[q] == '1':
+                                phase = phase * ComplexFP16(-1.0, 0.0)
+                    
+                    # Add the contribution to the expectation value
+                    # Use conjugate() here for correct bra-ket calculation: ⟨ψ|O|ψ⟩
+                    expectation += coefficient * state[i].conjugate() * phase * state[target_idx]
+        
+        # Ensure the result is real (or very close to real with minimal imaginary part)
+        if abs(expectation.imag) < 1e-10:
+            return ComplexFP16(expectation.real, 0.0)
+        else:
+            # If there's still a significant imaginary part, print a warning
+            print(f"Warning: Expectation value has imaginary component: {expectation.imag}")
+            return expectation
+    
+    def evaluate_expectation_old(self, state):
         """Evaluate the expectation value of the Hamiltonian for a given state
         
         Args:

@@ -1,5 +1,6 @@
 import numpy as np
 import cudaq
+from cudaq import spin
 from typing import List
 from qaoa_fp16.qaoa_algorithm import MaxCutQAOA_FP16
 from qaoa_fp16.utils import fidelity
@@ -40,6 +41,23 @@ def kernel_qaoa(qubit_count: int, layer_count: int, edges_src: List[int],
         # Add the mixer kernel to each layer
         for j in range(qubit_count):
             rx(2.0 * thetas[i + layer_count], qreg[j])
+
+def cudaq_build_maxcut_hamiltonian(edges_src, edges_tgt):
+    """Create the Hamiltonian for finding the max cut for the graph
+    
+    Returns:
+        Hamiltonian for finding the max cut of the graph
+    """
+    print(edges_src)
+    print(edges_tgt)
+    hamiltonian = 0
+    for edge in range(len(edges_src)):
+        qubitu = edges_src[edge]
+        qubitv = edges_tgt[edge]
+        # Add a term to the Hamiltonian for the edge (u,v)
+        hamiltonian += 0.5 * (spin.z(qubitu) * spin.z(qubitv) - 
+                             spin.i(qubitu) * spin.i(qubitv))
+    return hamiltonian
 
 def test_graph_circuit(caplog):
     """
@@ -130,13 +148,6 @@ def plot_state_counts(counts, filename):
     # Add a grid for easier reading
     ax.grid(axis='y', linestyle='--', alpha=0.7)
     
-    # Add value labels on top of each bar
-    for bar, prob in zip(bars, probabilities):
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height,
-                f'{prob:.4f}',
-                ha='center', va='bottom', rotation=0)
-    
     # Adjust layout to fit all elements
     plt.tight_layout()
     
@@ -146,7 +157,82 @@ def plot_state_counts(counts, filename):
     # Return the data for further use if needed
     return states, probabilities
 
-def test_graph_sample(caplog):
+def plot_state_counts_comparison(counts1, counts2, filename, label1="Distribution 1", label2="Distribution 2"):
+    """Plot two count distributions side by side for comparison
+    
+    Args:
+        counts1: First count distribution dictionary
+        counts2: Second count distribution dictionary 
+        filename: Name for saving the plot
+        label1: Label for first distribution
+        label2: Label for second distribution
+    """
+    # Calculate probabilities
+    total1 = sum(counts1.values())
+    total2 = sum(counts2.values())
+    probs1 = {state: count/total1 for state, count in counts1.items()}
+    probs2 = {state: count/total2 for state, count in counts2.items()}
+    
+    # Get all unique states
+    all_states = sorted(set(list(probs1.keys()) + list(probs2.keys())))
+    
+    # Fill in missing states with 0 probability
+    prob_list1 = [probs1.get(state, 0) for state in all_states]
+    prob_list2 = [probs2.get(state, 0) for state in all_states]
+    
+    # Convert to numpy arrays for plotting
+    x = np.arange(len(all_states))
+    width = 0.35
+    
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=(15, 6))
+    
+    # Create bars
+    rects1 = ax.bar(x - width/2, prob_list1, width, label=label1)
+    rects2 = ax.bar(x + width/2, prob_list2, width, label=label2)
+    
+    # Add labels and title
+    ax.set_title('Comparison of State Distributions', fontsize=14)
+    ax.set_xlabel('State', fontsize=12)
+    ax.set_ylabel('Probability', fontsize=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels(all_states)
+    
+    # Rotate x-axis labels if needed
+    if len(all_states) > 10:
+        plt.xticks(rotation=45, ha='right')
+    
+    # Add legend
+    ax.legend()
+    
+    # Add grid
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Adjust layout
+    plt.tight_layout()
+    
+    # Save plot
+    plt.savefig(f"{filename}.png")
+    plt.close()
+
+def total_variation_distance(counts1, counts2):
+    """Calculate TVD between two count dictionaries"""
+    # Get all possible bitstrings
+    bitstrings = [x for x, _ in counts1.items()]
+    
+    # Convert to probabilities
+    total1 = sum(counts1.values())
+    total2 = sum(counts2.values())
+    
+    prob1 = {k: counts1[k] / total1 for k in bitstrings}
+    prob2 = {k: counts2[k] / total2 for k in bitstrings}
+    
+    # Calculate TVD
+    tvd = 0.5 * sum(abs(prob1[k] - prob2[k]) for k in bitstrings)
+    
+    return tvd  # Range: [0, 1], lower is better
+
+def test_graph_sample_random_params(caplog):
     nodes: List[int] = [0, 1, 2, 3, 4]
     edges = [[0, 1], [1, 2], [2, 3], [3, 0], [2, 4], [3, 4]]
     edges_src: List[int] = [edges[i][0] for i in range(len(edges))]
@@ -156,5 +242,38 @@ def test_graph_sample(caplog):
     initial_params = np.random.uniform(-np.pi / 8, np.pi / 8, qaoa_fp16.parameter_count)
 
     cudaq_counts = cudaq.sample(kernel_qaoa, qaoa_fp16.qubit_count, qaoa_fp16.layer_count, edges_src, edges_tgt, initial_params.tolist(), shots_count=1000)
+    fp16_counts = qaoa_fp16.sample(initial_params.tolist(), shots=1000)
+    
+    # Generate individual distribution plots
     plot_state_counts(cudaq_counts, "cudaq_state_counts")
+    plot_state_counts(fp16_counts, "fp16_state_counts")
+    
+    # Generate comparison plot
+    plot_state_counts_comparison(cudaq_counts, fp16_counts, "state_counts_comparison", 
+                               label1="CUDA-Q", label2="FP16")
+    
+    # Calculate TVD
+    tvd = total_variation_distance(cudaq_counts, fp16_counts)
+    logging.info(f"Total Variation Distance: {tvd}")
 
+def test_graph_eval_expectation_random_params(caplog):
+    nodes: List[int] = [0, 1, 2, 3, 4]
+    edges = [[0, 1], [1, 2], [2, 3], [3, 0], [2, 4], [3, 4]]
+    edges_src: List[int] = [edges[i][0] for i in range(len(edges))]
+    edges_tgt: List[int] = [edges[i][1] for i in range(len(edges))]
+
+    qaoa_fp16 = MaxCutQAOA_FP16(nodes, edges, layer_count=2, seed=42)
+    logging.info(f"fp16 hamiltonian: \n{qaoa_fp16.hamiltonian}")
+    cudaq_hamiltonian = cudaq_build_maxcut_hamiltonian(edges_src, edges_tgt)
+    logging.info(f"CUDA-Q Hamiltonian: \n{cudaq_hamiltonian}")
+
+    initial_params = np.random.uniform(-np.pi / 8, np.pi / 8, qaoa_fp16.parameter_count)
+
+    fp16_state = qaoa_fp16.apply_qaoa_circuit(initial_params.tolist())
+    fp16_expectation = qaoa_fp16.evaluate_expectation(fp16_state)
+    logging.info(f"fp16 expectation: {fp16_expectation}")
+
+    cudaq_state = cudaq.get_state(kernel_qaoa, qaoa_fp16.qubit_count, qaoa_fp16.layer_count, edges_src, edges_tgt, initial_params.tolist())
+    cudaq_expectation = cudaq.observe(kernel_qaoa, cudaq_hamiltonian, qaoa_fp16.qubit_count, qaoa_fp16.layer_count,
+                            edges_src, edges_tgt, initial_params.tolist()).expectation()
+    logging.info(f"CUDA-Q expectation: {cudaq_expectation}")

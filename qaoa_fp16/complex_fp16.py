@@ -63,6 +63,9 @@ class ComplexFP16:
     
     def __repr__(self):
         return f"ComplexFP16({self.real}, {self.imag})"
+
+    def conjugate(self):
+        return ComplexFP16(self.real, -self.imag)
     
     def to_complex64(self):
         """Convert to numpy complex64 for compatibility with other functions"""
